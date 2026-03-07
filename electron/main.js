@@ -1,3 +1,6 @@
+// Ensure Electron runs as Electron, not as Node
+delete process.env.ELECTRON_RUN_AS_NODE;
+
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
