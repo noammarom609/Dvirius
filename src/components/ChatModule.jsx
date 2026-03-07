@@ -44,12 +44,26 @@ const ChatModule = ({
                 className="flex flex-col gap-3 overflow-y-auto mb-4 scrollbar-hide mask-image-gradient relative z-10"
                 style={{ height: height ? `calc(${height}px - 70px)` : '15rem' }}
             >
-                {messages.slice(-5).map((msg, i) => (
-                    <div key={i} className="text-sm border-l-2 border-cyan-800/50 pl-3 py-1">
-                        <span className="text-cyan-600 font-mono text-xs opacity-70">[{msg.time}]</span> <span className="font-bold text-cyan-300 drop-shadow-sm">{msg.sender}</span>
-                        <div className="text-gray-300 mt-1 leading-relaxed">{msg.text}</div>
-                    </div>
-                ))}
+                {messages.slice(-5).map((msg, i) => {
+                    const isAI = msg.sender !== 'User' && msg.sender !== 'System';
+                    return (
+                        <div key={i} className={`text-sm rounded-xl px-4 py-2.5 ${
+                            msg.sender === 'System'
+                                ? 'bg-white/5 border border-white/5 text-gray-500 text-xs'
+                                : isAI
+                                    ? 'bg-teal-500/5 border border-teal-500/10'
+                                    : 'bg-violet-500/5 border border-violet-500/10'
+                        }`}>
+                            <div className="flex items-center gap-2 mb-1">
+                                <span className={`font-medium text-xs ${
+                                    msg.sender === 'System' ? 'text-gray-600' : isAI ? 'text-teal-400' : 'text-violet-400'
+                                }`}>{msg.sender}</span>
+                                <span className="text-gray-700 font-mono text-[10px]">{msg.time}</span>
+                            </div>
+                            <div className="text-gray-300 leading-relaxed">{msg.text}</div>
+                        </div>
+                    );
+                })}
                 <div ref={messagesEndRef} />
             </div>
 
@@ -59,8 +73,8 @@ const ChatModule = ({
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
                     onKeyDown={handleSend}
-                    placeholder="INITIALIZE COMMAND..."
-                    className="flex-1 bg-black/40 border border-cyan-700/30 rounded-lg p-3 text-cyan-50 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/50 transition-all placeholder-cyan-800/50 backdrop-blur-sm"
+                    placeholder="Type a message..."
+                    className="flex-1 bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:border-teal-500/40 focus:ring-1 focus:ring-teal-500/20 transition-all placeholder-gray-600 text-sm"
                 />
             </div>
             {isModularMode && <div className={`absolute -top-6 left-0 text-xs font-bold tracking-widest ${activeDragElement === 'chat' ? 'text-green-500' : 'text-yellow-500/50'}`}>CHAT MODULE</div>}

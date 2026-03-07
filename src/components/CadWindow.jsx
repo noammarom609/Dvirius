@@ -107,7 +107,7 @@ const CadWindow = ({ data, thoughts, retryInfo = {}, onClose, socket }) => {
     };
 
     return (
-        <div className="w-full h-full relative group bg-gray-900 rounded-lg overflow-hidden border border-cyan-500/30">
+        <div className="w-full h-full relative group bg-gray-900 rounded-lg overflow-hidden border border-white/10">
             {/* Close Button */}
             <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button onClick={onClose} className="bg-red-500/20 hover:bg-red-500/50 text-red-500 p-1 rounded">X</button>
@@ -117,7 +117,7 @@ const CadWindow = ({ data, thoughts, retryInfo = {}, onClose, socket }) => {
             <div className="absolute top-2 left-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
                 <button
                     onClick={() => setIsIterating(true)}
-                    className="bg-cyan-500/20 hover:bg-cyan-500/50 text-cyan-400 text-xs px-2 py-1 rounded border border-cyan-500/30 backdrop-blur-sm"
+                    className="bg-teal-500/20 hover:bg-teal-500/50 text-teal-400 text-xs px-2 py-1 rounded border border-teal-500/50 backdrop-blur-sm"
                 >
                     ITERATE
                 </button>
@@ -139,15 +139,15 @@ const CadWindow = ({ data, thoughts, retryInfo = {}, onClose, socket }) => {
             {/* Show if iterating OR if no data exists (and not loading) */}
             {(isIterating || (!data && data?.format !== 'loading')) && (
                 <div className={`absolute inset-0 z-20 ${!data ? 'bg-gray-900' : 'bg-black/80'} flex items-center justify-center p-4`}>
-                    <div className="bg-gray-800 border border-cyan-500/50 rounded p-4 w-full max-w-sm pointer-events-auto shadow-[0_0_20px_rgba(6,182,212,0.2)]">
-                        <h4 className="text-cyan-400 text-sm mb-2 font-mono">
+                    <div className="bg-gray-800 border border-teal-500/50 rounded p-4 w-full max-w-sm pointer-events-auto shadow-[0_0_20px_rgba(94,234,212,0.1)]">
+                        <h4 className="text-teal-400 text-sm mb-2 font-mono">
                             {!data ? "New Design" : "Refine Design"}
                         </h4>
                         <textarea
                             value={prompt}
                             onChange={(e) => setPrompt(e.target.value)}
                             placeholder={!data ? "Describe what you want to create..." : "e.g., Make the wheels bigger..."}
-                            className="w-full bg-gray-900 border border-gray-700 rounded p-2 text-white text-sm mb-3 focus:outline-none focus:border-cyan-500 h-24 resize-none"
+                            className="w-full bg-gray-900 border border-gray-700 rounded p-2 text-white text-sm mb-3 focus:outline-none focus:border-teal-500 h-24 resize-none"
                             autoFocus
                             onKeyDown={(e) => {
                                 if (e.key === 'Enter' && !e.shiftKey) {
@@ -169,7 +169,7 @@ const CadWindow = ({ data, thoughts, retryInfo = {}, onClose, socket }) => {
                             <button
                                 onClick={!data ? handleGenerate : handleIterate}
                                 disabled={isSending}
-                                className="bg-cyan-600 hover:bg-cyan-500 text-white text-xs px-3 py-1 rounded"
+                                className="bg-teal-600 hover:bg-teal-500 text-white text-xs px-3 py-1 rounded"
                             >
                                 {isSending ? "Generating..." : (!data ? "Generate" : "Update")}
                             </button>
@@ -205,7 +205,7 @@ const CadWindow = ({ data, thoughts, retryInfo = {}, onClose, socket }) => {
                             Designer Thinking...
                         </h4>
                         {retryInfo.attempt && (
-                            <span className={`text-xs font-mono px-2 py-0.5 rounded ${retryInfo.error ? 'bg-yellow-500/20 text-yellow-400' : 'bg-cyan-500/20 text-cyan-400'}`}>
+                            <span className={`text-xs font-mono px-2 py-0.5 rounded ${retryInfo.error ? 'bg-yellow-500/20 text-yellow-400' : 'bg-teal-500/20 text-teal-400'}`}>
                                 Attempt {retryInfo.attempt}/{retryInfo.maxAttempts || 3}
                             </span>
                         )}
@@ -222,7 +222,7 @@ const CadWindow = ({ data, thoughts, retryInfo = {}, onClose, socket }) => {
                 </div>
             )}
 
-            <div className="absolute bottom-2 left-2 text-[10px] text-cyan-500/50 font-mono tracking-widest pointer-events-none">
+            <div className="absolute bottom-2 left-2 text-[10px] text-teal-400/50 font-mono tracking-widest pointer-events-none">
                 CAD_ENGINE_V2: {data?.format?.toUpperCase() || "READY"}
             </div>
         </div>

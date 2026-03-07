@@ -7,15 +7,9 @@ module.exports = {
     theme: {
         extend: {
             fontFamily: {
-                mono: ['"Share Tech Mono"', 'monospace'], // Sci-fi font
+                sans: ['Inter', 'system-ui', 'sans-serif'],
+                mono: ['"JetBrains Mono"', 'monospace'],
             },
-            colors: {
-                cyan: {
-                    400: '#22d3ee',
-                    500: '#06b6d4',
-                    900: '#164e63',
-                }
-            }
         },
     },
     plugins: [],

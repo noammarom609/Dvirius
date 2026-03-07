@@ -2,14 +2,21 @@ const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
 
-// Use ANGLE D3D11 backend - more stable on Windows while keeping WebGL working
-// This fixes "GPU state invalid after WaitForGetOffsetInRange" error
 app.commandLine.appendSwitch('use-angle', 'd3d11');
 app.commandLine.appendSwitch('enable-features', 'Vulkan');
 app.commandLine.appendSwitch('ignore-gpu-blocklist');
 
+const isDev = !app.isPackaged;
+
 let mainWindow;
 let pythonProcess;
+
+function getResourcePath(relativePath) {
+    if (isDev) {
+        return path.join(__dirname, '..', relativePath);
+    }
+    return path.join(process.resourcesPath, relativePath);
+}
 
 function createWindow() {
     mainWindow = new BrowserWindow({
@@ -17,21 +24,17 @@ function createWindow() {
         height: 1080,
         webPreferences: {
             nodeIntegration: true,
-            contextIsolation: false, // For simple IPC/Socket.IO usage
+            contextIsolation: false,
         },
         backgroundColor: '#000000',
-        frame: false, // Frameless for custom UI
+        frame: false,
         titleBarStyle: 'hidden',
-        show: false, // Don't show until ready
+        show: false,
     });
 
-    // In dev, load Vite server. In prod, load index.html
-    const isDev = process.env.NODE_ENV !== 'production';
-
     const loadFrontend = (retries = 3) => {
-        const url = isDev ? 'http://localhost:5173' : null;
         const loadPromise = isDev
-            ? mainWindow.loadURL(url)
+            ? mainWindow.loadURL('http://localhost:5180')
             : mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
 
         loadPromise
@@ -51,7 +54,7 @@ function createWindow() {
                 } else {
                     console.error('Failed to load frontend after all retries. Keeping window open.');
                     windowWasShown = true;
-                    mainWindow.show(); // Show anyway so user sees something
+                    mainWindow.show();
                 }
             });
     };
@@ -64,12 +67,13 @@ function createWindow() {
 }
 
 function startPythonBackend() {
-    const scriptPath = path.join(__dirname, '../backend/server.py');
+    const backendDir = getResourcePath('backend');
+    const scriptPath = path.join(backendDir, 'server.py');
     console.log(`Starting Python backend: ${scriptPath}`);
 
-    // Assuming 'python' is in PATH. In prod, this would be the executable.
     pythonProcess = spawn('python', [scriptPath], {
-        cwd: path.join(__dirname, '../backend'),
+        cwd: backendDir,
+        env: { ...process.env },
     });
 
     pythonProcess.stdout.on('data', (data) => {
@@ -78,6 +82,10 @@ function startPythonBackend() {
 
     pythonProcess.stderr.on('data', (data) => {
         console.error(`[Python Error]: ${data}`);
+    });
+
+    pythonProcess.on('error', (err) => {
+        console.error(`Failed to start Python backend: ${err.message}`);
     });
 }
 
@@ -100,13 +108,12 @@ app.whenReady().then(() => {
         if (mainWindow) mainWindow.close();
     });
 
-    checkBackendPort(8000).then((isTaken) => {
+    checkBackendPort(8001).then((isTaken) => {
         if (isTaken) {
-            console.log('Port 8000 is taken. Assuming backend is already running manually.');
+            console.log('Port 8001 is taken. Assuming backend is already running manually.');
             waitForBackend().then(createWindow);
         } else {
             startPythonBackend();
-            // Give it a moment to start, then wait for health check
             setTimeout(() => {
                 waitForBackend().then(createWindow);
             }, 1000);
@@ -141,7 +148,7 @@ function waitForBackend() {
     return new Promise((resolve) => {
         const check = () => {
             const http = require('http');
-            http.get('http://127.0.0.1:8000/status', (res) => {
+            http.get('http://127.0.0.1:8001/status', (res) => {
                 if (res.statusCode === 200) {
                     console.log('Backend is ready!');
                     resolve();
@@ -161,8 +168,6 @@ function waitForBackend() {
 let windowWasShown = false;
 
 app.on('window-all-closed', () => {
-    // Only quit if the window was actually shown at least once
-    // This prevents quitting during startup if window creation fails
     if (process.platform !== 'darwin' && windowWasShown) {
         app.quit();
     } else if (!windowWasShown) {
@@ -174,7 +179,6 @@ app.on('will-quit', () => {
     console.log('App closing... Killing Python backend.');
     if (pythonProcess) {
         if (process.platform === 'win32') {
-            // Windows: Force kill the process tree synchronously
             try {
                 const { execSync } = require('child_process');
                 execSync(`taskkill /pid ${pythonProcess.pid} /f /t`);
@@ -182,7 +186,6 @@ app.on('will-quit', () => {
                 console.error('Failed to kill python process:', e.message);
             }
         } else {
-            // Unix: SIGKILL
             pythonProcess.kill('SIGKILL');
         }
         pythonProcess = null;

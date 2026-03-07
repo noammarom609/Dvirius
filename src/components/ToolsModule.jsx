@@ -61,7 +61,7 @@ const ToolsModule = ({
                         ? 'border-gray-800 text-gray-800 cursor-not-allowed'
                         : isMuted
                             ? 'border-red-500 bg-red-500/10 text-red-500 hover:bg-red-500/20 shadow-[0_0_15px_rgba(239,68,68,0.3)]'
-                            : 'border-cyan-500 bg-cyan-500/10 text-cyan-500 hover:bg-cyan-500/20 shadow-[0_0_15px_rgba(6,182,212,0.3)]'
+                            : 'border-teal-400 bg-teal-400/10 text-teal-400 hover:bg-teal-400/20 shadow-[0_0_15px_rgba(94,234,212,0.2)]'
                         } `}
                 >
                     {isMuted ? <MicOff size={24} /> : <Mic size={24} />}
@@ -72,7 +72,7 @@ const ToolsModule = ({
                     onClick={onToggleVideo}
                     className={`p-3 rounded-full border-2 transition-all duration-300 ${isVideoOn
                         ? 'border-purple-500 bg-purple-500/10 text-purple-500 hover:bg-purple-500/20 shadow-[0_0_15px_rgba(168,85,247,0.3)]'
-                        : 'border-cyan-900 text-cyan-700 hover:border-cyan-500 hover:text-cyan-500'
+                        : 'border-white/10 text-gray-500 hover:border-teal-500/30 hover:text-teal-400'
                         } `}
                 >
                     {isVideoOn ? <Video size={24} /> : <VideoOff size={24} />}
@@ -81,7 +81,7 @@ const ToolsModule = ({
                 {/* Settings Button */}
                 <button
                     onClick={onToggleSettings}
-                    className={`p-3 rounded-full border-2 transition-all ${showSettings ? 'border-cyan-400 text-cyan-400 bg-cyan-900/20' : 'border-cyan-900 text-cyan-700 hover:border-cyan-500 hover:text-cyan-500'
+                    className={`p-3 rounded-full border-2 transition-all ${showSettings ? 'border-teal-400 text-teal-400 bg-teal-900/20' : 'border-white/10 text-gray-500 hover:border-teal-500/30 hover:text-teal-400'
                         } `}
                 >
                     <Settings size={24} />
@@ -92,7 +92,7 @@ const ToolsModule = ({
                     onClick={onToggleHand}
                     className={`p-3 rounded-full border-2 transition-all duration-300 ${isHandTrackingEnabled
                         ? 'border-orange-500 bg-orange-500/10 text-orange-500 hover:bg-orange-500/20 shadow-[0_0_15px_rgba(249,115,22,0.3)]'
-                        : 'border-cyan-900 text-cyan-700 hover:border-cyan-500 hover:text-cyan-500'
+                        : 'border-white/10 text-gray-500 hover:border-teal-500/30 hover:text-teal-400'
                         } `}
                 >
                     <Hand size={24} />
@@ -103,7 +103,7 @@ const ToolsModule = ({
                     onClick={onToggleKasa}
                     className={`p-3 rounded-full border-2 transition-all duration-300 ${showKasaWindow
                         ? 'border-yellow-300 bg-yellow-300/10 text-yellow-300 hover:bg-yellow-300/20 shadow-[0_0_15px_rgba(253,224,71,0.3)]'
-                        : 'border-cyan-900 text-cyan-700 hover:border-cyan-500 hover:text-cyan-500'
+                        : 'border-white/10 text-gray-500 hover:border-teal-500/30 hover:text-teal-400'
                         } `}
                 >
                     <Lightbulb size={24} />
@@ -114,7 +114,7 @@ const ToolsModule = ({
                     onClick={onTogglePrinter}
                     className={`p-3 rounded-full border-2 transition-all duration-300 ${showPrinterWindow
                         ? 'border-green-400 bg-green-400/10 text-green-400 hover:bg-green-400/20'
-                        : 'border-cyan-900 text-cyan-700 hover:border-green-500 hover:text-green-500'
+                        : 'border-white/10 text-gray-500 hover:border-green-500 hover:text-green-500'
                         } `}
                 >
                     <Printer size={24} />
@@ -124,8 +124,8 @@ const ToolsModule = ({
                 <button
                     onClick={onToggleCad}
                     className={`p-3 rounded-full border-2 transition-all duration-300 ${showCadWindow
-                        ? 'border-cyan-400 bg-cyan-400/10 text-cyan-400 hover:bg-cyan-400/20 shadow-[0_0_15px_rgba(34,211,238,0.3)]'
-                        : 'border-cyan-900 text-cyan-700 hover:border-cyan-500 hover:text-cyan-500'
+                        ? 'border-teal-400 bg-teal-400/10 text-teal-400 hover:bg-teal-400/20 shadow-[0_0_15px_rgba(94,234,212,0.2)]'
+                        : 'border-white/10 text-gray-500 hover:border-teal-500/30 hover:text-teal-400'
                         } `}
                 >
                     <Box size={24} />
@@ -136,7 +136,7 @@ const ToolsModule = ({
                     onClick={onToggleBrowser}
                     className={`p-3 rounded-full border-2 transition-all duration-300 ${showBrowserWindow
                         ? 'border-blue-400 bg-blue-400/10 text-blue-400 hover:bg-blue-400/20 shadow-[0_0_15px_rgba(96,165,250,0.3)]'
-                        : 'border-cyan-900 text-cyan-700 hover:border-blue-500 hover:text-blue-500'
+                        : 'border-white/10 text-gray-500 hover:border-blue-500 hover:text-blue-500'
                         } `}
                 >
                     <Globe size={24} />

@@ -27,7 +27,7 @@ const BrowserWindow = ({ imageSrc, logs, onClose, socket }) => {
             {/* Header Bar - Drag Handle */}
             <div data-drag-handle className="h-8 bg-[#222] border-b border-gray-700 flex items-center justify-between px-2 shrink-0 cursor-grab active:cursor-grabbing">
                 <div className="flex items-center gap-2 text-gray-300 text-xs font-mono">
-                    <Globe size={14} className="text-cyan-500" />
+                    <Globe size={14} className="text-teal-400" />
                     <span>WEB_AGENT_VIEW</span>
                 </div>
                 <button onClick={onClose} className="hover:bg-red-500/20 text-gray-400 hover:text-red-400 p-1 rounded transition-colors">
@@ -52,7 +52,7 @@ const BrowserWindow = ({ imageSrc, logs, onClose, socket }) => {
 
             {/* Input Bar */}
             <div className="h-10 bg-[#161616] border-t border-gray-800 flex items-center px-2 gap-2">
-                <span className="text-cyan-500 font-mono text-xs">{'>'}</span>
+                <span className="text-teal-400 font-mono text-xs">{'>'}</span>
                 <input
                     type="text"
                     value={input}
@@ -66,7 +66,7 @@ const BrowserWindow = ({ imageSrc, logs, onClose, socket }) => {
             {/* Logs Overlay (Bottom) */}
             <div className="h-24 bg-black/90 backdrop-blur border-t border-gray-800 p-2 font-mono text-[10px] overflow-y-auto text-green-500/80">
                 {logs.map((log, i) => (
-                    <div key={i} className="mb-1 border-l-2 border-cyan-900 pl-1 break-words">
+                    <div key={i} className="mb-1 border-l-2 border-white/10 pl-1 break-words">
                         <span className="opacity-50 mr-2">[{new Date().toLocaleTimeString().split(' ')[0]}]</span>
                         {log}
                     </div>

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 
-const Visualizer = ({ audioData, isListening, intensity = 0, width = 600, height = 400 }) => {
+const Visualizer = ({ audioData, isListening, intensity = 0, width = 600, height = 400, name = "A.D.A" }) => {
     const canvasRef = useRef(null);
 
     // Use a ref for audioData to avoid re-creating the animation loop on every frame
@@ -32,10 +32,6 @@ const Visualizer = ({ audioData, isListening, intensity = 0, width = 600, height
             const centerX = w / 2;
             const centerY = h / 2;
 
-            // Use current audio data from ref if we were using it for visualization
-            // Currently the effect only uses 'intensity', passed as prop. 
-            // To ensure we aren't re-triggering this effect constantly, we use refs.
-
             const currentIntensity = intensityRef.current;
             const currentIsListening = isListeningRef.current;
 
@@ -47,7 +43,7 @@ const Visualizer = ({ audioData, isListening, intensity = 0, width = 600, height
             // Base Circle (Glow)
             ctx.beginPath();
             ctx.arc(centerX, centerY, radius - 10, 0, Math.PI * 2);
-            ctx.strokeStyle = 'rgba(6, 182, 212, 0.1)';
+            ctx.strokeStyle = 'rgba(94, 234, 212, 0.08)';
             ctx.lineWidth = 2;
             ctx.stroke();
 
@@ -58,20 +54,20 @@ const Visualizer = ({ audioData, isListening, intensity = 0, width = 600, height
 
                 ctx.beginPath();
                 ctx.arc(centerX, centerY, radius + breath, 0, Math.PI * 2);
-                ctx.strokeStyle = 'rgba(34, 211, 238, 0.5)';
+                ctx.strokeStyle = 'rgba(94, 234, 212, 0.4)';
                 ctx.lineWidth = 4;
                 ctx.shadowBlur = 20;
-                ctx.shadowColor = '#22d3ee';
+                ctx.shadowColor = '#5eead4';
                 ctx.stroke();
                 ctx.shadowBlur = 0;
             } else {
                 // Active State: Just the Circle causing the pulse
                 ctx.beginPath();
                 ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-                ctx.strokeStyle = 'rgba(34, 211, 238, 0.8)';
+                ctx.strokeStyle = 'rgba(94, 234, 212, 0.7)';
                 ctx.lineWidth = 4;
                 ctx.shadowBlur = 20;
-                ctx.shadowColor = '#22d3ee';
+                ctx.shadowColor = '#5eead4';
                 ctx.stroke();
                 ctx.shadowBlur = 0;
             }
@@ -90,10 +86,10 @@ const Visualizer = ({ audioData, isListening, intensity = 0, width = 600, height
                 <motion.div
                     animate={{ scale: isListening ? [1, 1.1, 1] : 1 }}
                     transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                    className="text-cyan-100 font-bold tracking-widest drop-shadow-[0_0_15px_rgba(34,211,238,0.8)]"
+                    className="text-teal-100 font-semibold tracking-[0.25em] drop-shadow-[0_0_20px_rgba(94,234,212,0.6)]"
                     style={{ fontSize: Math.min(width, height) * 0.1 }}
                 >
-                    A.D.A
+                    {name}
                 </motion.div>
             </div>
 

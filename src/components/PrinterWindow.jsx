@@ -74,7 +74,7 @@ const PrinterWindow = ({
         if (s.includes('print')) return 'text-green-400';
         if (s.includes('paus')) return 'text-yellow-400';
         if (s.includes('error') || s.includes('fail')) return 'text-red-400';
-        return 'text-cyan-400';
+        return 'text-teal-400';
     };
 
     return (
@@ -222,7 +222,7 @@ const PrinterWindow = ({
                                         {/* Open Interface Button */}
                                         <button
                                             onClick={() => shell.openExternal(`http://${printer.host}`)}
-                                            className="flex items-center gap-1 text-[10px] text-cyan-400 hover:text-cyan-300 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 px-2 py-0.5 rounded transition-colors"
+                                            className="flex items-center gap-1 text-[10px] text-teal-400 hover:text-teal-300 bg-teal-500/10 hover:bg-teal-500/20 border border-white/10 px-2 py-0.5 rounded transition-colors"
                                             title="Open printer web interface"
                                         >
                                             <ExternalLink size={10} />

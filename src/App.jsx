@@ -15,10 +15,11 @@ import AuthLock from './components/AuthLock';
 import KasaWindow from './components/KasaWindow';
 import PrinterWindow from './components/PrinterWindow';
 import SettingsWindow from './components/SettingsWindow';
+import SetupWizard from './components/SetupWizard';
 
 
 
-const socket = io('http://localhost:8000');
+const socket = io('http://localhost:8001');
 const { ipcRenderer } = window.require('electron');
 
 function App() {
@@ -37,6 +38,11 @@ function App() {
         // If 'false' or null (default off), we start unlocked.
         return saved === 'true';
     });
+    const [setupComplete, setSetupComplete] = useState(() => {
+        return localStorage.getItem('setup_complete') === 'true';
+    });
+    const [userName, setUserName] = useState(() => localStorage.getItem('user_name') || '');
+    const [aiName, setAiName] = useState(() => localStorage.getItem('ai_name') || 'Ada');
 
     // Local state for tracking settings, also init from local storage
     const [faceAuthEnabled, setFaceAuthEnabled] = useState(() => {
@@ -329,9 +335,9 @@ function App() {
         socket.on('status', (data) => {
             addMessage('System', data.msg);
             // Update status bar based on backend messages
-            if (data.msg === 'A.D.A Started') {
+            if (data.msg.includes('Started')) {
                 setStatus('Model Connected');
-            } else if (data.msg === 'A.D.A Stopped') {
+            } else if (data.msg.includes('Stopped')) {
                 setStatus('Connected');
             }
         });
@@ -366,6 +372,18 @@ function App() {
             if (typeof settings.camera_flipped !== 'undefined') {
                 console.log("[Settings] Camera flip set to:", settings.camera_flipped);
                 setIsCameraFlipped(settings.camera_flipped);
+            }
+            if (typeof settings.setup_complete !== 'undefined') {
+                setSetupComplete(settings.setup_complete);
+                localStorage.setItem('setup_complete', settings.setup_complete);
+            }
+            if (settings.user_name) {
+                setUserName(settings.user_name);
+                localStorage.setItem('user_name', settings.user_name);
+            }
+            if (settings.ai_name) {
+                setAiName(settings.ai_name);
+                localStorage.setItem('ai_name', settings.ai_name);
             }
         });
         socket.on('error', (data) => {
@@ -1343,7 +1361,7 @@ function App() {
 
 
     return (
-        <div className="h-screen w-screen bg-black text-cyan-100 font-mono overflow-hidden flex flex-col relative selection:bg-cyan-900 selection:text-white">
+        <div className="h-screen w-screen bg-black text-gray-100 font-sans overflow-hidden flex flex-col relative selection:bg-teal-900 selection:text-white">
 
             {/* --- PREMIUM UI LAYER --- */}
 
@@ -1351,7 +1369,21 @@ function App() {
 
             {/* --- PREMIUM UI LAYER --- */}
 
-            {/* Logic: Show AuthLock if we are NOT authenticated AND (Lock Screen is visible OR Auth is Enabled) 
+            {!setupComplete && (
+                <SetupWizard
+                    socket={socket}
+                    onComplete={(settings) => {
+                        setSetupComplete(true);
+                        setUserName(settings.user_name);
+                        setAiName(settings.ai_name);
+                        localStorage.setItem('setup_complete', 'true');
+                        localStorage.setItem('user_name', settings.user_name);
+                        localStorage.setItem('ai_name', settings.ai_name);
+                    }}
+                />
+            )}
+
+            {/* Logic: Show AuthLock if we are NOT authenticated AND (Lock Screen is visible OR Auth is Enabled)
                 Actually, simpler: isLockScreenVisible is the source of truth for visibility.
                 We set isLockScreenVisible = true via socket if auth is required.
              */}
@@ -1361,6 +1393,7 @@ function App() {
                     socket={socket}
                     onAuthenticated={() => setIsAuthenticated(true)}
                     onAnimationComplete={() => setIsLockScreenVisible(false)}
+                    userName={userName}
                 />
             )}
 
@@ -1369,7 +1402,7 @@ function App() {
             {/* Hand Cursor - Only show if tracking is enabled */}
             {isVideoOn && isHandTrackingEnabled && (
                 <div
-                    className={`fixed w-6 h-6 border-2 rounded-full pointer-events-none z-[100] transition-transform duration-75 ${isPinching ? 'bg-cyan-400 border-cyan-400 scale-75 shadow-[0_0_15px_rgba(34,211,238,0.8)]' : 'border-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.3)]'}`}
+                    className={`fixed w-6 h-6 border-2 rounded-full pointer-events-none z-[100] transition-transform duration-75 ${isPinching ? 'bg-teal-400 border-teal-400 scale-75 shadow-[0_0_15px_rgba(94,234,212,0.8)]' : 'border-teal-400 shadow-[0_0_10px_rgba(94,234,212,0.3)]'}`}
                     style={{
                         left: cursorPos.x,
                         top: cursorPos.y,
@@ -1390,16 +1423,16 @@ function App() {
 
             {/* Ambient Glow (Fixed: Static) */}
             <div
-                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-cyan-900/10 rounded-full blur-[120px] pointer-events-none"
+                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-teal-900/10 rounded-full blur-[120px] pointer-events-none"
             />
 
             {/* Top Bar (Draggable) */}
-            <div className="z-50 flex items-center justify-between p-2 border-b border-cyan-500/20 bg-black/40 backdrop-blur-md select-none sticky top-0" style={{ WebkitAppRegion: 'drag' }}>
+            <div className="z-50 flex items-center justify-between px-4 py-2.5 border-b border-white/5 bg-black/30 backdrop-blur-2xl select-none sticky top-0" style={{ WebkitAppRegion: 'drag' }}>
                 <div className="flex items-center gap-4 pl-2">
-                    <h1 className="text-xl font-bold tracking-[0.2em] text-cyan-400 drop-shadow-[0_0_10px_rgba(34,211,238,0.5)]">
-                        A.D.A
+                    <h1 className="text-xl font-bold tracking-[0.2em] text-teal-400 drop-shadow-[0_0_10px_rgba(94,234,212,0.5)]">
+                        {aiName}
                     </h1>
-                    <div className="text-[10px] text-cyan-700 border border-cyan-900 px-1 rounded">
+                    <div className="text-[10px] text-gray-500 border border-white/10 px-2 py-0.5 rounded-full">
                         V2.0.0
                     </div>
                     {/* FPS Counter */}
@@ -1431,14 +1464,14 @@ function App() {
 
                 <div className="flex items-center gap-2 pr-2" style={{ WebkitAppRegion: 'no-drag' }}>
                     {/* Live Clock */}
-                    <div className="flex items-center gap-1.5 text-[11px] text-cyan-300/70 font-mono px-2">
-                        <Clock size={12} className="text-cyan-500/50" />
+                    <div className="flex items-center gap-1.5 text-[11px] text-gray-400 font-mono px-2">
+                        <Clock size={12} className="text-gray-600" />
                         <span>{currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
-                    <button onClick={handleMinimize} className="p-1 hover:bg-cyan-900/50 rounded text-cyan-500 transition-colors">
+                    <button onClick={handleMinimize} className="p-1 hover:bg-white/5 rounded text-gray-400 transition-colors">
                         <Minus size={18} />
                     </button>
-                    <button onClick={handleMaximize} className="p-1 hover:bg-cyan-900/50 rounded text-cyan-500 transition-colors">
+                    <button onClick={handleMaximize} className="p-1 hover:bg-white/5 rounded text-gray-400 transition-colors">
                         <div className="w-[14px] h-[14px] border-2 border-current rounded-[2px]" />
                     </button>
                     <button onClick={handleCloseRequest} className="p-1 hover:bg-red-900/50 rounded text-red-500 transition-colors">
@@ -1473,6 +1506,7 @@ function App() {
                             intensity={audioAmp}
                             width={elementSizes.visualizer.w}
                             height={elementSizes.visualizer.h}
+                            name={aiName}
                         />
                     </div>
                     {isModularMode && <div className={`absolute top-2 right-2 text-xs font-bold tracking-widest z-20 ${activeDragElement === 'visualizer' ? 'text-green-500' : 'text-yellow-500/50'}`}>VISUALIZER</div>}
@@ -1480,7 +1514,7 @@ function App() {
 
                 {/* Video Feed Overlay */}
                 {/* Floating Project Label */}
-                <div className="absolute top-[70px] left-1/2 -translate-x-1/2 text-cyan-500 text-xs font-mono tracking-widest pointer-events-none z-50 bg-black/50 px-2 py-1 rounded backdrop-blur-sm border border-cyan-500/20">
+                <div className="absolute top-[70px] left-1/2 -translate-x-1/2 text-teal-400 text-xs font-mono tracking-widest pointer-events-none z-50 bg-black/50 px-2 py-1 rounded backdrop-blur-sm border border-teal-500/20">
                     PROJECT: {currentProject?.toUpperCase()}
                 </div>
 
@@ -1494,11 +1528,11 @@ function App() {
                 >
                     <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-5 pointer-events-none mix-blend-overlay"></div>
                     {/* Compact Display Container (1080p Source) */}
-                    <div className="relative border border-cyan-500/30 rounded-lg overflow-hidden shadow-[0_0_20px_rgba(6,182,212,0.1)] w-80 aspect-video bg-black/80">
+                    <div className="relative border border-white/10 rounded-lg overflow-hidden shadow-[0_0_20px_rgba(94,234,212,0.06)] w-80 aspect-video bg-black/80">
                         {/* Hidden Video Element (Source) */}
                         <video ref={videoRef} autoPlay muted className="absolute inset-0 w-full h-full object-cover opacity-0" />
 
-                        <div className="absolute top-2 left-2 text-[10px] text-cyan-400 bg-black/60 backdrop-blur px-2 py-0.5 rounded border border-cyan-500/20 z-10 font-bold tracking-wider">CAM_01</div>
+                        <div className="absolute top-2 left-2 text-[10px] text-teal-400 bg-black/60 backdrop-blur px-2 py-0.5 rounded border border-teal-500/20 z-10 font-bold tracking-wider">CAM_01</div>
 
                         {/* Canvas for Displaying Video + Skeleton (Ensures overlap) */}
                         <canvas
@@ -1513,6 +1547,8 @@ function App() {
                 {showSettings && (
                     <SettingsWindow
                         socket={socket}
+                        userName={userName}
+                        aiName={aiName}
                         micDevices={micDevices}
                         speakerDevices={speakerDevices}
                         webcamDevices={webcamDevices}
@@ -1553,9 +1589,9 @@ function App() {
                         {/* Drag Handle Header */}
                         <div
                             data-drag-handle
-                            className="h-8 bg-gray-900/80 border-b border-cyan-500/20 flex items-center justify-between px-3 cursor-grab active:cursor-grabbing shrink-0"
+                            className="h-8 bg-gray-900/80 border-b border-white/10 flex items-center justify-between px-3 cursor-grab active:cursor-grabbing shrink-0"
                         >
-                            <span className="text-xs font-bold tracking-widest text-cyan-500/70">CAD PROTOTYPE</span>
+                            <span className="text-xs font-bold tracking-widest text-teal-400/70">CAD PROTOTYPE</span>
                             <button
                                 onClick={() => setShowCadWindow(false)}
                                 className="text-gray-400 hover:text-red-400 hover:bg-red-500/20 p-1 rounded transition-colors"

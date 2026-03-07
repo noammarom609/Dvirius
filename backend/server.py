@@ -58,6 +58,9 @@ kasa_agent = KasaAgent()
 SETTINGS_FILE = "settings.json"
 
 DEFAULT_SETTINGS = {
+    "user_name": "",
+    "ai_name": "Ada",
+    "setup_complete": False,
     "face_auth_enabled": False, # Default OFF as requested
     "tool_permissions": {
         "generate_cad": True,
@@ -126,12 +129,12 @@ async def startup_event():
 
 @app.get("/status")
 async def status():
-    return {"status": "running", "service": "A.D.A Backend"}
+    return {"status": "running", "service": f'{SETTINGS.get("ai_name", "A.D.A")} Backend'}
 
 @sio.event
 async def connect(sid, environ):
     print(f"Client connected: {sid}")
-    await sio.emit('status', {'msg': 'Connected to A.D.A Backend'}, room=sid)
+    await sio.emit('status', {'msg': f'Connected to {SETTINGS.get("ai_name", "A.D.A")} Backend'}, room=sid)
 
     global authenticator
     
@@ -203,7 +206,7 @@ async def start_audio(sid, data=None):
              loop_task = None
         else:
              print("Audio loop already running. Re-connecting client to session.")
-             await sio.emit('status', {'msg': 'A.D.A Already Running'})
+             await sio.emit('status', {'msg': f'{SETTINGS.get("ai_name", "A.D.A")} Already Running'})
              return
 
 
@@ -286,7 +289,9 @@ async def start_audio(sid, data=None):
 
             input_device_index=device_index,
             input_device_name=device_name,
-            kasa_agent=kasa_agent
+            kasa_agent=kasa_agent,
+            user_name=SETTINGS.get("user_name", ""),
+            ai_name=SETTINGS.get("ai_name", "Ada")
         )
         print("AudioLoop initialized successfully.")
 
@@ -313,8 +318,9 @@ async def start_audio(sid, data=None):
         
         loop_task.add_done_callback(handle_loop_exit)
         
-        print("Emitting 'A.D.A Started'")
-        await sio.emit('status', {'msg': 'A.D.A Started'})
+        ai = SETTINGS.get("ai_name", "A.D.A")
+        print(f"Emitting '{ai} Started'")
+        await sio.emit('status', {'msg': f'{ai} Started'})
 
         # Load saved printers
         saved_printers = SETTINGS.get("printers", [])
@@ -379,7 +385,7 @@ async def stop_audio(sid):
         audio_loop.stop() 
         print("Stopping Audio Loop")
         audio_loop = None
-        await sio.emit('status', {'msg': 'A.D.A Stopped'})
+        await sio.emit('status', {'msg': f'{SETTINGS.get("ai_name", "A.D.A")} Stopped'})
 
 @sio.event
 async def pause_audio(sid):
@@ -717,7 +723,7 @@ async def discover_printers(sid):
             return
         else:
             await sio.emit('printer_list', [])
-            await sio.emit('status', {'msg': "Connect to A.D.A to enable printer discovery"})
+            await sio.emit('status', {'msg': f"Connect to {SETTINGS.get('ai_name', 'A.D.A')} to enable printer discovery"})
             return
         
     try:
@@ -957,10 +963,46 @@ async def update_settings(sid, data):
         SETTINGS["camera_flipped"] = data["camera_flipped"]
         print(f"[SERVER] Camera flip set to: {data['camera_flipped']}")
 
+    if "user_name" in data:
+        SETTINGS["user_name"] = data["user_name"]
+
+    if "ai_name" in data:
+        SETTINGS["ai_name"] = data["ai_name"]
+
     save_settings()
     # Broadcast new full settings
     await sio.emit('settings', SETTINGS)
 
+@sio.event
+async def complete_setup(sid, data):
+    """Handle first-run setup: save user name, AI name, and API key."""
+    user_name = data.get('user_name', '')
+    ai_name = data.get('ai_name', 'Ada')
+    api_key = data.get('api_key', '')
+
+    print(f"[SERVER] Setup: user_name={user_name}, ai_name={ai_name}, api_key={'***' if api_key else 'EMPTY'}")
+
+    # Save names to settings
+    SETTINGS["user_name"] = user_name
+    SETTINGS["ai_name"] = ai_name
+    SETTINGS["setup_complete"] = True
+    save_settings()
+
+    # Save API key to .env file
+    if api_key:
+        env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '.env')
+        try:
+            with open(env_path, 'w') as f:
+                f.write(f"GEMINI_API_KEY={api_key}\n")
+            print(f"[SERVER] API key saved to {env_path}")
+        except Exception as e:
+            print(f"[SERVER] Error saving API key: {e}")
+            await sio.emit('error', {'msg': f"Failed to save API key: {str(e)}"})
+            return
+
+    # Broadcast updated settings
+    await sio.emit('settings', SETTINGS)
+    await sio.emit('status', {'msg': 'Setup complete!'})
 
 # Deprecated/Mapped for compatibility if frontend still uses specific events
 @sio.event
@@ -982,7 +1024,7 @@ if __name__ == "__main__":
     uvicorn.run(
         "server:app_socketio", 
         host="127.0.0.1", 
-        port=8000, 
+        port=8001, 
         reload=False, # Reload enabled causes spawn of worker which might miss the event loop policy patch
         loop="asyncio",
         reload_excludes=["temp_cad_gen.py", "output.stl", "*.stl"]
