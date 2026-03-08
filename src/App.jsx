@@ -17,6 +17,8 @@ import PrinterWindow from './components/PrinterWindow';
 import SettingsWindow from './components/SettingsWindow';
 import SetupWizard from './components/SetupWizard';
 import LoginScreen from './components/LoginScreen';
+import PlanBanner from './components/PlanBanner';
+import UpdateNotification from './components/UpdateNotification';
 import {
     isLoggedIn,
     saveTokens,
@@ -1469,11 +1471,8 @@ function App() {
     return (
         <div className="h-screen w-screen bg-black text-gray-100 font-sans overflow-hidden flex flex-col relative selection:bg-teal-900 selection:text-white">
 
-            {/* --- PREMIUM UI LAYER --- */}
-
-            {/* --- PREMIUM UI LAYER --- */}
-
-            {/* --- PREMIUM UI LAYER --- */}
+            {/* Auto-Update Notification */}
+            <UpdateNotification />
 
             {/* Cloud Login Screen — shown if not logged in */}
             {!cloudLoggedIn && (
@@ -1813,6 +1812,15 @@ function App() {
                         onMouseDown={(e) => handleMouseDown(e, 'tools')}
                     />
                 </div>
+
+                {/* Plan Banner — shows current plan, usage, and upgrade option */}
+                {cloudLoggedIn && (
+                    <PlanBanner
+                        plan={userPlan}
+                        usage={{ minutes_used_today: 0 }}
+                        features={cloudFeatures}
+                    />
+                )}
 
                 {/* Kasa Window */}
                 {showKasaWindow && (

@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
+const { autoUpdater } = require('electron-updater');
 
 app.commandLine.appendSwitch('use-angle', 'd3d11');
 app.commandLine.appendSwitch('enable-features', 'Vulkan');
@@ -190,6 +191,66 @@ app.whenReady().then(() => {
         event.preventDefault();
         handleAuthDeepLink(url);
     });
+
+    // ── Auto-Updater (GitHub Releases) ──────────────────────────
+    if (!isDev) {
+        autoUpdater.autoDownload = true;
+        autoUpdater.autoInstallOnAppQuit = true;
+
+        autoUpdater.on('checking-for-update', () => {
+            console.log('[Updater] Checking for updates...');
+        });
+
+        autoUpdater.on('update-available', (info) => {
+            console.log('[Updater] Update available:', info.version);
+            if (mainWindow) {
+                mainWindow.webContents.send('update-status', {
+                    status: 'downloading',
+                    version: info.version,
+                });
+            }
+        });
+
+        autoUpdater.on('update-not-available', () => {
+            console.log('[Updater] App is up to date.');
+        });
+
+        autoUpdater.on('download-progress', (progress) => {
+            console.log(`[Updater] Download: ${Math.round(progress.percent)}%`);
+            if (mainWindow) {
+                mainWindow.webContents.send('update-status', {
+                    status: 'progress',
+                    percent: Math.round(progress.percent),
+                });
+            }
+        });
+
+        autoUpdater.on('update-downloaded', (info) => {
+            console.log('[Updater] Update downloaded:', info.version);
+            if (mainWindow) {
+                mainWindow.webContents.send('update-status', {
+                    status: 'ready',
+                    version: info.version,
+                });
+            }
+        });
+
+        autoUpdater.on('error', (err) => {
+            console.error('[Updater] Error:', err.message);
+        });
+
+        // Check for updates after window is ready (delay to avoid startup load)
+        setTimeout(() => {
+            autoUpdater.checkForUpdatesAndNotify().catch((err) =>
+                console.error('[Updater] Check failed:', err.message)
+            );
+        }, 10000);
+
+        // Also handle manual restart request from renderer
+        ipcMain.on('install-update', () => {
+            autoUpdater.quitAndInstall();
+        });
+    }
 });
 
 function checkBackendPort(port) {
