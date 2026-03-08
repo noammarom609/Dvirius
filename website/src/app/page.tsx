@@ -378,7 +378,7 @@ export default function Home() {
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <a
-                href="https://github.com/noammarom609/Dvirius/releases/latest"
+                href="/api/download?platform=win"
                 className="group flex items-center gap-3 px-8 py-4 rounded-2xl text-base font-semibold bg-gradient-to-r from-teal-500 to-violet-500 text-white hover:from-teal-400 hover:to-violet-400 transition-all hover:shadow-[0_0_40px_rgba(94,234,212,0.2)]"
               >
                 <Download size={20} />
