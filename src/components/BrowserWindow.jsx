@@ -54,7 +54,7 @@ const BrowserWindow = ({ imageSrc, logs, onClose, socket, onResize }) => {
 
     const handleSend = () => {
         if (!input.trim()) return;
-        if (socket) {
+        if (socket?.connected) {
             socket.emit('prompt_web_agent', { prompt: input });
             // Optionally add a local log
             // But usually backend sends logs back.

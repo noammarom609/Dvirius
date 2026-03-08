@@ -72,7 +72,7 @@ const CadWindow = ({ data, thoughts, retryInfo = {}, onClose, socket }) => {
     const handleGenerate = () => {
         if (!prompt.trim()) return;
         setIsSending(true);
-        if (socket) {
+        if (socket?.connected) {
             socket.emit('generate_cad', { prompt });
         } else {
             console.error("Socket not available in CadWindow");
@@ -95,7 +95,7 @@ const CadWindow = ({ data, thoughts, retryInfo = {}, onClose, socket }) => {
         // For now, looking at App.jsx structure, socket might not be prop. 
         // If socket is missing, we can use window.socket if available or emit a custom event.
 
-        if (socket) {
+        if (socket?.connected) {
             socket.emit('iterate_cad', { prompt });
         } else {
             console.error("Socket not available in CadWindow");
@@ -127,7 +127,7 @@ const CadWindow = ({ data, thoughts, retryInfo = {}, onClose, socket }) => {
                         // Since slicing requires backend file, we ideally emit an event or show UI
                         // For now we'll rely on voice or tool window, but user requested button here.
                         // Best approach: Open Printer Window + Auto-populate / Trigger
-                        if (socket) socket.emit('request_print_window');
+                        if (socket?.connected) socket.emit('request_print_window');
                     }}
                     className="bg-green-500/20 hover:bg-green-500/50 text-green-400 text-xs px-2 py-1 rounded border border-green-500/30 backdrop-blur-sm flex items-center gap-1"
                 >

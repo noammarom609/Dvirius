@@ -51,7 +51,7 @@ def signal_handler(sig, frame):
         try:
             print("[SERVER] Stopping Audio Loop...")
             audio_loop.stop() 
-        except:
+        except Exception:
             pass
     # Force kill
     print("[SERVER] Force exiting...")
@@ -89,6 +89,7 @@ DEFAULT_SETTINGS = {
 }
 
 SETTINGS = DEFAULT_SETTINGS.copy()
+_settings_lock = asyncio.Lock()
 
 def load_settings():
     global SETTINGS
@@ -107,13 +108,14 @@ def load_settings():
         except Exception as e:
             print(f"Error loading settings: {e}")
 
-def save_settings():
-    try:
-        with open(SETTINGS_FILE, 'w') as f:
-            json.dump(SETTINGS, f, indent=4)
-        print("Settings saved.")
-    except Exception as e:
-        print(f"Error saving settings: {e}")
+async def save_settings():
+    async with _settings_lock:
+        try:
+            with open(SETTINGS_FILE, 'w') as f:
+                json.dump(SETTINGS, f, indent=4)
+            print("Settings saved.")
+        except Exception as e:
+            print(f"Error saving settings: {e}")
 
 # Load on startup
 load_settings()
@@ -537,6 +539,7 @@ async def save_memory(sid, data):
             for msg in messages:
                 sender = msg.get('sender', 'Unknown')
                 text = msg.get('text', '')
+                f.write(f"[{sender}]: {text}\n")
         print(f"Conversation saved to {filename}")
         await sio.emit('status', {'msg': 'Memory Saved Successfully'})
 
@@ -597,8 +600,9 @@ async def discover_kasa(sid):
         # For now, just overwrite with latest scan result + previously known if we want to be fancy,
         # but user asked for "Any new devices that are scanned are added there".
         # A simple full persistence of current state is safest.
-        SETTINGS["kasa_devices"] = saved_devices
-        save_settings()
+        async with _settings_lock:
+            SETTINGS["kasa_devices"] = saved_devices
+        await save_settings()
         print(f"[SERVER] Saved {len(saved_devices)} Kasa devices to settings.")
         
     except Exception as e:
@@ -755,7 +759,11 @@ async def add_printer(sid, data):
     # Parse port if present
     if ":" in raw_host:
         host, port_str = raw_host.split(":")
-        port = int(port_str)
+        try:
+            port = int(port_str)
+        except (ValueError, TypeError):
+            await sio.emit('error', {'msg': f"Invalid port: {port_str}"})
+            return
     else:
         host = raw_host
         port = 80
@@ -788,10 +796,11 @@ async def add_printer(sid, data):
                 break
         
         if not exists:
-            if "printers" not in SETTINGS:
-                SETTINGS["printers"] = []
-            SETTINGS["printers"].append(new_printer_config)
-            save_settings()
+            async with _settings_lock:
+                if "printers" not in SETTINGS:
+                    SETTINGS["printers"] = []
+                SETTINGS["printers"].append(new_printer_config)
+            await save_settings()
             print(f"[SERVER] Saved printer {name} to settings.")
         
         # Probe to confirm/correct type
@@ -956,31 +965,32 @@ async def update_settings(sid, data):
     print(f"Updating settings: {data}")
     
     # Handle specific keys if needed
-    if "tool_permissions" in data:
-        SETTINGS["tool_permissions"].update(data["tool_permissions"])
-        if audio_loop:
-            audio_loop.update_permissions(SETTINGS["tool_permissions"])
-            
-    if "face_auth_enabled" in data:
-        SETTINGS["face_auth_enabled"] = data["face_auth_enabled"]
-        # If turned OFF, maybe emit auth status true?
-        if not data["face_auth_enabled"]:
-             await sio.emit('auth_status', {'authenticated': True})
-             # Stop auth loop if running?
-             if authenticator:
-                 authenticator.stop() 
+    async with _settings_lock:
+        if "tool_permissions" in data:
+            SETTINGS["tool_permissions"].update(data["tool_permissions"])
+            if audio_loop:
+                audio_loop.update_permissions(SETTINGS["tool_permissions"])
 
-    if "camera_flipped" in data:
-        SETTINGS["camera_flipped"] = data["camera_flipped"]
-        print(f"[SERVER] Camera flip set to: {data['camera_flipped']}")
+        if "face_auth_enabled" in data:
+            SETTINGS["face_auth_enabled"] = data["face_auth_enabled"]
+            # If turned OFF, maybe emit auth status true?
+            if not data["face_auth_enabled"]:
+                 await sio.emit('auth_status', {'authenticated': True})
+                 # Stop auth loop if running?
+                 if authenticator:
+                     authenticator.stop()
 
-    if "user_name" in data:
-        SETTINGS["user_name"] = data["user_name"]
+        if "camera_flipped" in data:
+            SETTINGS["camera_flipped"] = data["camera_flipped"]
+            print(f"[SERVER] Camera flip set to: {data['camera_flipped']}")
 
-    if "ai_name" in data:
-        SETTINGS["ai_name"] = data["ai_name"]
+        if "user_name" in data:
+            SETTINGS["user_name"] = data["user_name"]
 
-    save_settings()
+        if "ai_name" in data:
+            SETTINGS["ai_name"] = data["ai_name"]
+
+    await save_settings()
     # Broadcast new full settings
     await sio.emit('settings', SETTINGS)
 
@@ -1003,10 +1013,11 @@ async def complete_setup(sid, data):
     print(f"[SERVER] Setup: user_name={user_name}, ai_name={ai_name}, api_key={'***' if api_key else 'EMPTY'}")
 
     # Save names to settings
-    SETTINGS["user_name"] = user_name
-    SETTINGS["ai_name"] = ai_name
-    SETTINGS["setup_complete"] = True
-    save_settings()
+    async with _settings_lock:
+        SETTINGS["user_name"] = user_name
+        SETTINGS["ai_name"] = ai_name
+        SETTINGS["setup_complete"] = True
+    await save_settings()
 
     # Save API key to .env file
     if api_key:
@@ -1053,11 +1064,12 @@ async def set_cloud_session(sid, data):
             print(f"[SERVER] Error saving cloud API key: {e}")
 
     # Store plan and features in settings
-    SETTINGS['cloud_plan'] = plan
-    SETTINGS['cloud_features'] = features
-    if model:
-        SETTINGS['cloud_model'] = model
-    save_settings()
+    async with _settings_lock:
+        SETTINGS['cloud_plan'] = plan
+        SETTINGS['cloud_features'] = features
+        if model:
+            SETTINGS['cloud_model'] = model
+    await save_settings()
 
     await sio.emit('status', {'msg': f'Cloud session active — plan: {plan}'})
 
@@ -1069,8 +1081,9 @@ async def get_tool_permissions(sid):
 @sio.event
 async def update_tool_permissions(sid, data):
     print(f"Updating permissions (legacy event): {data}")
-    SETTINGS["tool_permissions"].update(data)
-    save_settings()
+    async with _settings_lock:
+        SETTINGS["tool_permissions"].update(data)
+    await save_settings()
     
     if audio_loop:
         audio_loop.update_permissions(SETTINGS["tool_permissions"])

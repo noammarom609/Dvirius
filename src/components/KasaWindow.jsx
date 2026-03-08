@@ -33,7 +33,7 @@ const KasaWindow = ({
 
     const handleDiscover = () => {
         setIsThinking(true);
-        socket.emit('discover_kasa');
+        socket?.connected && socket.emit('discover_kasa');
         // Reset thinking after 5s if no response (safety)
         setTimeout(() => setIsThinking(false), 5000);
     };
@@ -46,7 +46,7 @@ const KasaWindow = ({
 
     const handleToggle = (ip, currentState) => {
         setLoadingDevices(prev => ({ ...prev, [ip]: true }));
-        socket.emit('control_kasa', {
+        socket?.connected && socket.emit('control_kasa', {
             ip: ip,
             action: currentState ? 'off' : 'on'
         });
@@ -54,7 +54,7 @@ const KasaWindow = ({
 
 
     const handleBrightness = (ip, val) => {
-        socket.emit('control_kasa', {
+        socket?.connected && socket.emit('control_kasa', {
             ip: ip,
             action: 'brightness',
             value: parseInt(val)
@@ -62,7 +62,7 @@ const KasaWindow = ({
     };
 
     const handleColor = (ip, hue) => {
-        socket.emit('control_kasa', {
+        socket?.connected && socket.emit('control_kasa', {
             ip: ip,
             action: 'color',
             value: { h: parseInt(hue), s: 100, v: 100 }

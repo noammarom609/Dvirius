@@ -27,15 +27,20 @@ async def get_profile(user: dict = Depends(get_current_user)):
     result = sb.table("profiles").select("*").eq("id", user_id).single().execute()
 
     if not result.data:
-        # Auto-create profile for OAuth users (who bypass /signup)
+        # Auto-create profile for OAuth users (who bypass /signup).
+        # Wrap in try-except to handle duplicate key from concurrent requests.
         email = user.get("email", "")
         display_name = user.get("user_metadata", {}).get("full_name", "") or email.split("@")[0]
-        sb.table("profiles").insert({
-            "id": user_id,
-            "email": email,
-            "display_name": display_name,
-            "plan": "free",
-        }).execute()
+        try:
+            sb.table("profiles").insert({
+                "id": user_id,
+                "email": email,
+                "display_name": display_name,
+                "plan": "free",
+            }).execute()
+        except Exception:
+            # Likely a duplicate key — profile was created by a concurrent request
+            pass
         result = sb.table("profiles").select("*").eq("id", user_id).single().execute()
         if not result.data:
             raise HTTPException(status_code=404, detail="Profile creation failed")

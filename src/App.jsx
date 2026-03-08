@@ -1,3 +1,5 @@
+const APP_VERSION = __APP_VERSION__ || '2.0.0';
+
 import React, { useEffect, useState, useRef } from 'react';
 import io from 'socket.io-client';
 
@@ -31,11 +33,24 @@ import {
     setupSessionWatcher,
 } from './utils/auth';
 import { initAnalytics, Events, resetAnalytics, isPrivacyMode, setPrivacyMode } from './utils/analytics';
+import { useToast } from './components/Toast';
 
 const socket = io('http://localhost:8001');
 const { ipcRenderer } = window.require('electron');
 
 function App() {
+    const toast = useToast();
+
+    // Safe socket emit helper — prevents silent failures when backend is disconnected
+    function safeEmit(event, data) {
+        if (!socket.connected) {
+            toast?.warn('Not connected to backend');
+            return false;
+        }
+        socket.emit(event, data);
+        return true;
+    }
+
     const [status, setStatus] = useState('Disconnected');
     const [socketConnected, setSocketConnected] = useState(socket.connected); // Track socket connection reactively
     // Auth State
@@ -319,8 +334,8 @@ function App() {
             hasAutoConnectedRef.current = true;
 
             // Trigger Kasa and Printer Discovery
-            socket.emit('discover_kasa');
-            socket.emit('discover_printers');
+            safeEmit('discover_kasa');
+            safeEmit('discover_printers');
 
             // Connect to model once WebSocket transport is ready
             const tryStartAudio = () => {
@@ -330,7 +345,7 @@ function App() {
                 console.log("Auto-connecting to model with device:", deviceName, "Index:", index);
 
                 setStatus('Connecting...');
-                socket.emit('start_audio', {
+                safeEmit('start_audio', {
                     device_index: index >= 0 ? index : null,
                     device_name: deviceName,
                     muted: isMuted
@@ -362,10 +377,12 @@ function App() {
             setStatus('Connected');
             setSocketConnected(true);
             socket.emit('get_settings');
+            toast.info('Backend connected');
         });
         socket.on('disconnect', () => {
             setStatus('Disconnected');
             setSocketConnected(false);
+            toast.info('Backend disconnected — reconnecting...');
         });
         socket.on('status', (data) => {
             addMessage('System', data.msg);
@@ -676,17 +693,22 @@ function App() {
             socket.off('disconnect');
             socket.off('status');
             socket.off('audio_data');
+            socket.off('auth_status');
+            socket.off('settings');
+            socket.off('error');
             socket.off('cad_data');
-            socket.off('cad_thought');
             socket.off('cad_status');
+            socket.off('cad_thought');
             socket.off('browser_frame');
             socket.off('transcription');
             socket.off('tool_confirmation_request');
+            socket.off('request_print_window');
             socket.off('kasa_devices');
+            socket.off('kasa_update');
+            socket.off('project_update');
             socket.off('printer_list');
             socket.off('slicing_progress');
             socket.off('print_status_update');
-            socket.off('error');
 
             stopMicVisualizer();
             stopVideo();
@@ -697,7 +719,7 @@ function App() {
     useEffect(() => {
         if (socket.connected) {
             setStatus('Connected');
-            socket.emit('get_settings');
+            safeEmit('get_settings');
         }
     }, []);
 
@@ -712,6 +734,7 @@ function App() {
                 expires_at: authData.expires_at,
             });
             setCloudLoggedIn(true);
+            toast.success('Connected to cloud');
             // Fetch profile to get user info
             fetchProfile().then((profile) => {
                 setUserName(profile.display_name || '');
@@ -757,6 +780,7 @@ function App() {
                 localStorage.setItem('setup_complete', 'true');
             } catch (err) {
                 console.error('[Cloud] Session creation failed:', err.message);
+                toast.error('Cloud connection failed');
                 // If session expired, force re-login
                 if (err.message === 'Session expired' || err.message === 'Not authenticated') {
                     setCloudLoggedIn(false);
@@ -772,6 +796,7 @@ function App() {
         if (!cloudLoggedIn) return;
         setupSessionWatcher(() => {
             console.warn('[Auth] Session expired — logging out');
+            toast.error('Session expired — please log in again');
             setCloudLoggedIn(false);
             setUserPlan('free');
             setCloudFeatures(null);
@@ -824,7 +849,14 @@ function App() {
         stopMicVisualizer();
         try {
             const stream = await navigator.mediaDevices.getUserMedia({
-                audio: { deviceId: { exact: deviceId } }
+                audio: {
+                    deviceId: { exact: deviceId },
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true,
+                    sampleRate: 16000,
+                    channelCount: 1,
+                }
             });
 
             audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
@@ -845,6 +877,7 @@ function App() {
             updateMicData();
         } catch (err) {
             console.error("Error accessing microphone:", err);
+            toast.error('Microphone access failed');
         }
     };
 
@@ -935,7 +968,7 @@ function App() {
                     // Convert resized image to blob
                     transCanvas.toBlob((blob) => {
                         if (blob) {
-                            socket.emit('video_frame', { image: blob });
+                            safeEmit('video_frame', { image: blob });
                         }
                     }, 'image/jpeg', 0.6); // Slightly higher compression for speed
                 }
@@ -1217,12 +1250,13 @@ function App() {
 
     const togglePower = () => {
         if (isConnected) {
-            socket.emit('stop_audio');
+            if (!window.confirm('Shut down Dvir?')) return;
+            safeEmit('stop_audio');
             setIsConnected(false);
             setIsMuted(false); // Reset mute state
         } else {
             const index = micDevices.findIndex(d => d.deviceId === selectedMicId);
-            socket.emit('start_audio', { device_index: index >= 0 ? index : null });
+            safeEmit('start_audio', { device_index: index >= 0 ? index : null });
             setIsConnected(true);
             setIsMuted(false); // Start unmuted
         }
@@ -1232,17 +1266,17 @@ function App() {
         if (!isConnected) return; // Can't mute if not connected
 
         if (isMuted) {
-            socket.emit('resume_audio');
+            safeEmit('resume_audio');
             setIsMuted(false);
         } else {
-            socket.emit('pause_audio');
+            safeEmit('pause_audio');
             setIsMuted(true);
         }
     };
 
     const handleSend = (e) => {
         if (e.key === 'Enter' && inputValue.trim()) {
-            socket.emit('user_input', { text: inputValue });
+            safeEmit('user_input', { text: inputValue });
             addMessage('You', inputValue);
             setInputValue('');
         }
@@ -1282,7 +1316,7 @@ function App() {
                 const textContent = event.target.result;
                 // Just send the text content directly
                 if (typeof textContent === 'string' && textContent.length > 0) {
-                    socket.emit('upload_memory', { memory: textContent });
+                    safeEmit('upload_memory', { memory: textContent });
                     addMessage('System', 'Uploading memory...');
                 } else {
                     addMessage('System', 'Empty or invalid memory file');
@@ -1299,14 +1333,14 @@ function App() {
 
     const handleConfirmTool = () => {
         if (confirmationRequest) {
-            socket.emit('confirm_tool', { id: confirmationRequest.id, confirmed: true });
+            safeEmit('confirm_tool', { id: confirmationRequest.id, confirmed: true });
             setConfirmationRequest(null);
         }
     };
 
     const handleDenyTool = () => {
         if (confirmationRequest) {
-            socket.emit('confirm_tool', { id: confirmationRequest.id, confirmed: false });
+            safeEmit('confirm_tool', { id: confirmationRequest.id, confirmed: false });
             setConfirmationRequest(null);
         }
     };
@@ -1475,7 +1509,7 @@ function App() {
     const toggleKasaWindow = () => {
         if (!showKasaWindow) {
             // Maybe trigger discover instantly?
-            if (kasaDevices.length === 0) socket.emit('discover_kasa');
+            if (kasaDevices.length === 0) safeEmit('discover_kasa');
         }
         setShowKasaWindow(!showKasaWindow);
     };
@@ -1497,6 +1531,7 @@ function App() {
                 <LoginScreen
                     onLoginSuccess={(result) => {
                         setCloudLoggedIn(true);
+                        toast.success('Connected to cloud');
                         if (result.user_id) localStorage.setItem('dvirious_user_id', result.user_id);
                         if (result.email) localStorage.setItem('dvirious_email', result.email);
                         // Fetch profile after login
@@ -1576,7 +1611,7 @@ function App() {
                         {aiName}
                     </h1>
                     <div className="text-[10px] text-gray-500 border border-white/10 px-2 py-0.5 rounded-full">
-                        V2.0.0
+                        V{APP_VERSION}
                     </div>
                     {/* FPS Counter */}
                     {isVideoOn && (
@@ -1707,12 +1742,14 @@ function App() {
                         setIsCameraFlipped={setIsCameraFlipped}
                         handleFileUpload={handleFileUpload}
                         onLogout={() => {
+                            if (!window.confirm('Log out from cloud?')) return;
                             cloudLogout();
                             resetAnalytics();
                             setCloudLoggedIn(false);
                             setUserPlan('free');
                             setCloudFeatures(null);
                             setShowSettings(false);
+                            toast.success('Logged out');
                         }}
                         onClose={() => setShowSettings(false)}
                     />

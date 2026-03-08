@@ -55,6 +55,22 @@ const LoginScreen = ({ onLoginSuccess }) => {
         }
     };
 
+    const getPasswordStrength = (pw) => {
+        if (!pw) return null;
+        const hasLetters = /[a-zA-Z]/.test(pw);
+        const hasNumbers = /[0-9]/.test(pw);
+        const hasSpecial = /[^a-zA-Z0-9]/.test(pw);
+        if (pw.length >= 10 && hasLetters && hasNumbers && hasSpecial)
+            return { label: 'Strong', color: '#2dd4bf', width: '100%' };
+        if (pw.length >= 8 && hasLetters && hasNumbers)
+            return { label: 'Good', color: '#22c55e', width: '75%' };
+        if (pw.length >= 6)
+            return { label: 'Fair', color: '#eab308', width: '50%' };
+        return { label: 'Weak', color: '#ef4444', width: '25%' };
+    };
+
+    const passwordStrength = mode === 'signup' && password.length > 0 ? getPasswordStrength(password) : null;
+
     return (
         <div className="fixed inset-0 z-[10000] bg-black flex items-center justify-center">
             {/* Background effects */}
@@ -164,17 +180,32 @@ const LoginScreen = ({ onLoginSuccess }) => {
                             />
                         </div>
 
-                        <div className="relative">
-                            <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                            <input
-                                type="password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                placeholder="Password"
-                                required
-                                minLength={6}
-                                className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-teal-500/50 focus:ring-1 focus:ring-teal-500/25 transition-all text-sm"
-                            />
+                        <div>
+                            <div className="relative">
+                                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                                <input
+                                    type="password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    placeholder="Password"
+                                    required
+                                    minLength={6}
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-teal-500/50 focus:ring-1 focus:ring-teal-500/25 transition-all text-sm"
+                                />
+                            </div>
+                            {passwordStrength && (
+                                <div className="mt-2 px-1">
+                                    <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden">
+                                        <div
+                                            className="h-full rounded-full transition-all duration-300"
+                                            style={{ width: passwordStrength.width, backgroundColor: passwordStrength.color }}
+                                        />
+                                    </div>
+                                    <p className="text-xs mt-1" style={{ color: passwordStrength.color }}>
+                                        {passwordStrength.label}
+                                    </p>
+                                </div>
+                            )}
                         </div>
 
                         {/* Error */}

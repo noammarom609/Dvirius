@@ -63,7 +63,7 @@ const PrinterWindow = ({
 
     const handleDiscover = () => {
         setIsDiscovering(true);
-        socket.emit('discover_printers');
+        socket?.connected && socket.emit('discover_printers');
         // Fallback timeout
         setTimeout(() => setIsDiscovering(false), 5000);
     };
@@ -138,7 +138,7 @@ const PrinterWindow = ({
                                         const nameInput = document.getElementById('printer-name-input');
                                         const name = nameInput?.value.trim() || ip;
                                         if (ip) {
-                                            socket.emit('add_printer', { host: ip, name: name, type: 'moonraker' });
+                                            socket?.connected && socket.emit('add_printer', { host: ip, name: name, type: 'moonraker' });
                                             e.target.value = '';
                                             if (nameInput) nameInput.value = '';
                                             setIsDiscovering(true);
@@ -154,7 +154,7 @@ const PrinterWindow = ({
                                     const ip = ipInput?.value.trim();
                                     const name = nameInput?.value.trim() || ip;
                                     if (ip) {
-                                        socket.emit('add_printer', { host: ip, name: name, type: 'moonraker' });
+                                        socket?.connected && socket.emit('add_printer', { host: ip, name: name, type: 'moonraker' });
                                         if (ipInput) ipInput.value = '';
                                         if (nameInput) nameInput.value = '';
                                         setIsDiscovering(true);
