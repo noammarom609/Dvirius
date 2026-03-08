@@ -59,7 +59,7 @@ SETTINGS_FILE = "settings.json"
 
 DEFAULT_SETTINGS = {
     "user_name": "",
-    "ai_name": "Ada",
+    "ai_name": "Dvirious",
     "setup_complete": False,
     "face_auth_enabled": False, # Default OFF as requested
     "tool_permissions": {
@@ -130,12 +130,12 @@ async def startup_event():
 
 @app.get("/status")
 async def status():
-    return {"status": "running", "service": f'{SETTINGS.get("ai_name", "A.D.A")} Backend'}
+    return {"status": "running", "service": f'{SETTINGS.get("ai_name", "Dvirious")} Backend'}
 
 @sio.event
 async def connect(sid, environ):
     print(f"Client connected: {sid}")
-    await sio.emit('status', {'msg': f'Connected to {SETTINGS.get("ai_name", "A.D.A")} Backend'}, room=sid)
+    await sio.emit('status', {'msg': f'Connected to {SETTINGS.get("ai_name", "Dvirious")} Backend'}, room=sid)
 
     global authenticator
     
@@ -207,7 +207,7 @@ async def start_audio(sid, data=None):
              loop_task = None
         else:
              print("Audio loop already running. Re-connecting client to session.")
-             await sio.emit('status', {'msg': f'{SETTINGS.get("ai_name", "A.D.A")} Already Running'})
+             await sio.emit('status', {'msg': f'{SETTINGS.get("ai_name", "Dvirious")} Already Running'})
              return
 
 
@@ -292,7 +292,7 @@ async def start_audio(sid, data=None):
             input_device_name=device_name,
             kasa_agent=kasa_agent,
             user_name=SETTINGS.get("user_name", ""),
-            ai_name=SETTINGS.get("ai_name", "Ada")
+            ai_name=SETTINGS.get("ai_name", "Dvirious")
         )
         print("AudioLoop initialized successfully.")
 
@@ -319,7 +319,7 @@ async def start_audio(sid, data=None):
         
         loop_task.add_done_callback(handle_loop_exit)
         
-        ai = SETTINGS.get("ai_name", "A.D.A")
+        ai = SETTINGS.get("ai_name", "Dvirious")
         print(f"Emitting '{ai} Started'")
         await sio.emit('status', {'msg': f'{ai} Started'})
 
@@ -386,7 +386,7 @@ async def stop_audio(sid):
         audio_loop.stop() 
         print("Stopping Audio Loop")
         audio_loop = None
-        await sio.emit('status', {'msg': f'{SETTINGS.get("ai_name", "A.D.A")} Stopped'})
+        await sio.emit('status', {'msg': f'{SETTINGS.get("ai_name", "Dvirious")} Stopped'})
 
 @sio.event
 async def pause_audio(sid):
@@ -724,7 +724,7 @@ async def discover_printers(sid):
             return
         else:
             await sio.emit('printer_list', [])
-            await sio.emit('status', {'msg': f"Connect to {SETTINGS.get('ai_name', 'A.D.A')} to enable printer discovery"})
+            await sio.emit('status', {'msg': f"Connect to {SETTINGS.get('ai_name', 'Dvirious')} to enable printer discovery"})
             return
         
     try:
@@ -987,7 +987,7 @@ async def update_settings(sid, data):
 async def complete_setup(sid, data):
     """Handle first-run setup: save user name, AI name, and API key."""
     user_name = data.get('user_name', '')
-    ai_name = data.get('ai_name', 'Ada')
+    ai_name = data.get('ai_name', 'Dvirious')
     api_key = data.get('api_key', '')
 
     print(f"[SERVER] Setup: user_name={user_name}, ai_name={ai_name}, api_key={'***' if api_key else 'EMPTY'}")

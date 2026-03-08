@@ -198,7 +198,7 @@ iterate_cad_tool = {
 tools = [{'google_search': {}}, {"function_declarations": [generate_cad, run_web_agent, run_command_tool, create_project_tool, switch_project_tool, list_projects_tool, list_smart_devices_tool, control_light_tool, discover_printers_tool, print_stl_tool, get_print_status_tool, iterate_cad_tool] + tools_list[0]['function_declarations'][1:]}]
 
 # --- CONFIG UPDATE: Enabled Transcription ---
-def build_config(user_name="", ai_name="Ada"):
+def build_config(user_name="", ai_name="Dvirious"):
     """Build Gemini LiveConnectConfig with dynamic names."""
     instruction_parts = [
         f"Your name is {ai_name}. ",
@@ -255,7 +255,7 @@ from kasa_agent import KasaAgent
 from printer_agent import PrinterAgent
 
 class AudioLoop:
-    def __init__(self, video_mode=DEFAULT_MODE, on_audio_data=None, on_video_frame=None, on_cad_data=None, on_web_data=None, on_transcription=None, on_tool_confirmation=None, on_cad_status=None, on_cad_thought=None, on_project_update=None, on_device_update=None, on_error=None, input_device_index=None, input_device_name=None, output_device_index=None, kasa_agent=None, user_name="", ai_name="Ada"):
+    def __init__(self, video_mode=DEFAULT_MODE, on_audio_data=None, on_video_frame=None, on_cad_data=None, on_web_data=None, on_transcription=None, on_tool_confirmation=None, on_cad_status=None, on_cad_thought=None, on_project_update=None, on_device_update=None, on_error=None, input_device_index=None, input_device_name=None, output_device_index=None, kasa_agent=None, user_name="", ai_name="Dvirious"):
         self.video_mode = video_mode
         self.on_audio_data = on_audio_data
         self.on_video_frame = on_video_frame
@@ -754,15 +754,16 @@ class AudioLoop:
 
                                         # Send to frontend (Streaming)
                                         if self.on_transcription:
-                                             self.on_transcription({"sender": "User", "text": delta})
-                                        
+                                             self.on_transcription({"sender": self.user_name or "User", "text": delta})
+
                                         # Buffer for Logging
-                                        if self.chat_buffer["sender"] != "User":
+                                        user_label = self.user_name or "User"
+                                        if self.chat_buffer["sender"] != user_label:
                                             # Flush previous if exists
                                             if self.chat_buffer["sender"] and self.chat_buffer["text"].strip():
                                                 self.project_manager.log_chat(self.chat_buffer["sender"], self.chat_buffer["text"])
                                             # Start new
-                                            self.chat_buffer = {"sender": "User", "text": delta}
+                                            self.chat_buffer = {"sender": user_label, "text": delta}
                                         else:
                                             # Append
                                             self.chat_buffer["text"] += delta
@@ -782,15 +783,15 @@ class AudioLoop:
                                     if delta:
                                         # Send to frontend (Streaming)
                                         if self.on_transcription:
-                                             self.on_transcription({"sender": "ADA", "text": delta})
-                                        
+                                             self.on_transcription({"sender": self.ai_name, "text": delta})
+
                                         # Buffer for Logging
-                                        if self.chat_buffer["sender"] != "ADA":
+                                        if self.chat_buffer["sender"] != self.ai_name:
                                             # Flush previous
                                             if self.chat_buffer["sender"] and self.chat_buffer["text"].strip():
                                                 self.project_manager.log_chat(self.chat_buffer["sender"], self.chat_buffer["text"])
                                             # Start new
-                                            self.chat_buffer = {"sender": "ADA", "text": delta}
+                                            self.chat_buffer = {"sender": self.ai_name, "text": delta}
                                         else:
                                             # Append
                                             self.chat_buffer["text"] += delta

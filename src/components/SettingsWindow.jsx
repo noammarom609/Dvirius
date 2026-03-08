@@ -135,7 +135,7 @@ const SettingsWindow = ({
                         <label className="text-[10px] text-gray-500 uppercase mb-1 block">AI Name</label>
                         <input
                             type="text"
-                            defaultValue={aiName || 'Ada'}
+                            defaultValue={aiName || 'Dvirious'}
                             onBlur={(e) => {
                                 socket.emit('update_settings', { ai_name: e.target.value });
                             }}

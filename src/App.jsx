@@ -42,7 +42,7 @@ function App() {
         return localStorage.getItem('setup_complete') === 'true';
     });
     const [userName, setUserName] = useState(() => localStorage.getItem('user_name') || '');
-    const [aiName, setAiName] = useState(() => localStorage.getItem('ai_name') || 'Ada');
+    const [aiName, setAiName] = useState(() => localStorage.getItem('ai_name') || 'Dvirious');
 
     // Local state for tracking settings, also init from local storage
     const [faceAuthEnabled, setFaceAuthEnabled] = useState(() => {
@@ -1675,6 +1675,7 @@ function App() {
                     width={elementSizes.chat.w}
                     height={elementSizes.chat.h}
                     onMouseDown={(e) => handleMouseDown(e, 'chat')}
+                    aiName={aiName}
                 />
 
                 {/* Footer Controls / Tools Module */}

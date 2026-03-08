@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 
 const SetupWizard = ({ socket, onComplete }) => {
     const [userName, setUserName] = useState('');
-    const [aiName, setAiName] = useState('Ada');
+    const [aiName, setAiName] = useState('Dvirious');
     const [apiKey, setApiKey] = useState('');
     const [error, setError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -23,7 +23,7 @@ const SetupWizard = ({ socket, onComplete }) => {
 
         socket.emit('complete_setup', {
             user_name: userName.trim(),
-            ai_name: aiName.trim() || 'Ada',
+            ai_name: aiName.trim() || 'Dvirious',
             api_key: apiKey.trim()
         });
 
@@ -99,7 +99,7 @@ const SetupWizard = ({ socket, onComplete }) => {
                                 type="text"
                                 value={aiName}
                                 onChange={(e) => setAiName(e.target.value)}
-                                placeholder="Ada"
+                                placeholder="Dvirious"
                                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-teal-500/50 focus:ring-1 focus:ring-teal-500/25 transition-all"
                             />
                         </div>

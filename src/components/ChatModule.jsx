@@ -10,7 +10,8 @@ const ChatModule = ({
     position,
     width = 672, // default max-w-2xl
     height,
-    onMouseDown
+    onMouseDown,
+    aiName
 }) => {
     const messagesEndRef = useRef(null);
 
@@ -45,7 +46,7 @@ const ChatModule = ({
                 style={{ height: height ? `calc(${height}px - 70px)` : '15rem' }}
             >
                 {messages.slice(-5).map((msg, i) => {
-                    const isAI = msg.sender !== 'User' && msg.sender !== 'System';
+                    const isAI = aiName ? msg.sender === aiName : (msg.sender !== 'User' && msg.sender !== 'System');
                     return (
                         <div key={i} className={`text-sm rounded-xl px-4 py-2.5 ${
                             msg.sender === 'System'

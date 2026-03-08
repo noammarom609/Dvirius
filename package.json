@@ -1,7 +1,7 @@
 {
-  "name": "ada-v2",
+  "name": "dvirious",
   "version": "1.0.0",
-  "description": "A.D.A V2 - AI Assistant",
+  "description": "Dvirious - AI Assistant",
   "main": "electron/main.js",
   "scripts": {
     "dev": "concurrently -k \"vite\" \"wait-on tcp:5180 && node electron/launch.js\"",
@@ -13,8 +13,8 @@
   "author": "Jarvis",
   "license": "ISC",
   "build": {
-    "appId": "com.jarvis.ada-v2",
-    "productName": "A.D.A",
+    "appId": "com.jarvis.dvirious",
+    "productName": "Dvirious",
     "directories": {
       "output": "release"
     },
@@ -52,7 +52,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "A.D.A"
+      "shortcutName": "Dvirious"
     }
   },
   "dependencies": {
