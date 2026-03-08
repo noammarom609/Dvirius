@@ -4,6 +4,7 @@ Uses Supabase Auth as the provider.
 """
 
 import os
+from urllib.parse import quote
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, EmailStr
 from api.supabase_client import get_supabase
@@ -40,10 +41,11 @@ async def get_oauth_url(provider: str = "google"):
         raise HTTPException(status_code=400, detail="Unsupported provider. Use 'google' or 'github'.")
 
     # The OAuth URL is constructed from Supabase's auth endpoint
+    encoded_redirect = quote(APP_REDIRECT_URL, safe='')
     oauth_url = (
         f"{SUPABASE_URL}/auth/v1/authorize"
         f"?provider={provider}"
-        f"&redirect_to={APP_REDIRECT_URL}"
+        f"&redirect_to={encoded_redirect}"
     )
 
     return {"url": oauth_url, "provider": provider}
