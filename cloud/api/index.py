@@ -40,3 +40,17 @@ async def root():
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+
+@app.get("/debug/env-check")
+async def env_check():
+    """Temporary debug endpoint — check which env vars are set."""
+    jwt_secret = os.environ.get("SUPABASE_JWT_SECRET", "")
+    return {
+        "SUPABASE_URL": bool(os.environ.get("SUPABASE_URL")),
+        "SUPABASE_ANON_KEY": bool(os.environ.get("SUPABASE_ANON_KEY")),
+        "SUPABASE_SERVICE_ROLE_KEY": bool(os.environ.get("SUPABASE_SERVICE_ROLE_KEY")),
+        "SUPABASE_JWT_SECRET": bool(jwt_secret),
+        "JWT_SECRET_LENGTH": len(jwt_secret),
+        "JWT_SECRET_PREFIX": jwt_secret[:4] + "..." if len(jwt_secret) > 4 else "EMPTY",
+    }
