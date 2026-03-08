@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
+import { X, LogOut } from 'lucide-react';
 import { isPrivacyMode, setPrivacyMode } from '../utils/analytics';
 
 const TOOLS = [
@@ -38,6 +38,7 @@ const SettingsWindow = ({
     isCameraFlipped,
     setIsCameraFlipped,
     handleFileUpload,
+    onLogout,
     onClose
 }) => {
     const [permissions, setPermissions] = useState({});
@@ -275,7 +276,7 @@ const SettingsWindow = ({
             </div>
 
             {/* Memory Section */}
-            <div>
+            <div className="mb-6">
                 <h3 className="text-teal-400 font-medium mb-2 text-xs uppercase tracking-wider opacity-80">Memory Data</h3>
                 <div className="flex flex-col gap-2">
                     <label className="text-[10px] text-gray-500 uppercase">Upload Memory Text</label>
@@ -287,6 +288,19 @@ const SettingsWindow = ({
                     />
                 </div>
             </div>
+
+            {/* Logout */}
+            {onLogout && (
+                <div className="pt-4 border-t border-white/5">
+                    <button
+                        onClick={onLogout}
+                        className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium text-red-400 bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 hover:border-red-500/30 transition-all"
+                    >
+                        <LogOut size={14} />
+                        Log Out
+                    </button>
+                </div>
+            )}
         </div>
     );
 };

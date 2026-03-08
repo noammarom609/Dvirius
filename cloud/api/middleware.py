@@ -1,37 +1,74 @@
 """Auth middleware — validates JWT from Supabase on every protected request."""
 
 import os
-import json
-import base64
-from fastapi import Request, HTTPException, Depends
+import time
+import httpx
+from fastapi import HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from jose import jwt, JWTError
+from jose import jwt, JWTError, jwk
 
 security = HTTPBearer()
 
-_raw_secret = os.environ.get("SUPABASE_JWT_SECRET", "")
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
+_JWKS_URL = f"{SUPABASE_URL}/auth/v1/.well-known/jwks.json" if SUPABASE_URL else ""
 
-# Supabase JWT secrets may be base64-encoded; pre-compute both forms
-_SECRETS = [_raw_secret]
-try:
-    _decoded = base64.b64decode(_raw_secret)
-    if _decoded != _raw_secret.encode():
-        _SECRETS.append(_decoded)
-except Exception:
-    pass
+# Cache JWKS keys in memory (refreshed every 10 minutes)
+_jwks_cache: dict = {"keys": [], "fetched_at": 0}
+_JWKS_TTL = 600  # seconds
 
 
-def _get_token_header(token: str) -> dict:
-    """Decode JWT header without verification."""
+def _fetch_jwks() -> list:
+    """Fetch JWKS from Supabase and cache the keys."""
+    now = time.time()
+    if _jwks_cache["keys"] and (now - _jwks_cache["fetched_at"]) < _JWKS_TTL:
+        return _jwks_cache["keys"]
+
+    if not _JWKS_URL:
+        return []
+
     try:
-        header_b64 = token.split('.')[0]
-        padding = 4 - len(header_b64) % 4
-        if padding != 4:
-            header_b64 += '=' * padding
-        return json.loads(base64.urlsafe_b64decode(header_b64))
-    except Exception:
-        return {}
+        resp = httpx.get(_JWKS_URL, timeout=5)
+        resp.raise_for_status()
+        data = resp.json()
+        _jwks_cache["keys"] = data.get("keys", [])
+        _jwks_cache["fetched_at"] = now
+        print(f"[Auth Middleware] JWKS fetched: {len(_jwks_cache['keys'])} keys")
+        return _jwks_cache["keys"]
+    except Exception as e:
+        print(f"[Auth Middleware] JWKS fetch failed: {e}")
+        return _jwks_cache["keys"]  # return stale if available
+
+
+def _get_signing_key(token: str) -> tuple:
+    """
+    Extract the signing key for the token from JWKS.
+    Returns (key, algorithm) or raises.
+    """
+    try:
+        header = jwt.get_unverified_header(token)
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token header")
+
+    kid = header.get("kid")
+    alg = header.get("alg", "HS256")
+
+    jwks_keys = _fetch_jwks()
+
+    # Find the key matching the token's kid
+    for key_data in jwks_keys:
+        if key_data.get("kid") == kid:
+            public_key = jwk.construct(key_data, alg)
+            return public_key, alg
+
+    # If no kid match but we have keys, try the first one
+    if jwks_keys:
+        public_key = jwk.construct(jwks_keys[0], alg)
+        return public_key, alg
+
+    raise HTTPException(
+        status_code=401,
+        detail=f"No matching key found for kid={kid}, alg={alg}, jwks_url={_JWKS_URL}, keys_count={len(jwks_keys)}"
+    )
 
 
 async def get_current_user(
@@ -42,42 +79,24 @@ async def get_current_user(
     Returns the decoded user payload (sub, email, etc.).
     """
     token = credentials.credentials
-    header = _get_token_header(token)
-    token_alg = header.get("alg", "unknown")
 
-    # Supabase uses HS256; accept common HMAC variants
-    allowed_algs = ["HS256", "HS384", "HS512"]
-
-    last_error = None
-    errors_by_secret = []
-
-    for i, secret in enumerate(_SECRETS):
-        try:
-            payload = jwt.decode(
-                token,
-                secret,
-                algorithms=allowed_algs,
-                audience="authenticated",
-            )
-            user_id = payload.get("sub")
-            if not user_id:
-                raise HTTPException(status_code=401, detail="Invalid token: no user ID")
-            return payload
-        except Exception as e:
-            last_error = e
-            errors_by_secret.append(f"secret[{i}]({type(secret).__name__}): {type(e).__name__}: {e}")
-            continue
-
-    # All attempts failed — return diagnostic info
-    detail = (
-        f"JWT verification failed | "
-        f"alg={token_alg} | "
-        f"header={header} | "
-        f"secrets_tried={len(_SECRETS)} | "
-        f"errors={errors_by_secret}"
-    )
-    print(f"[Auth Middleware] {detail}")
-    raise HTTPException(status_code=401, detail=detail)
+    try:
+        signing_key, alg = _get_signing_key(token)
+        payload = jwt.decode(
+            token,
+            signing_key,
+            algorithms=[alg],
+            audience="authenticated",
+        )
+        user_id = payload.get("sub")
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Invalid token: no user ID")
+        return payload
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[Auth Middleware] JWT decode failed: {type(e).__name__}: {e}")
+        raise HTTPException(status_code=401, detail=f"Invalid token: {e}")
 
 
 async def get_user_id(user: dict = Depends(get_current_user)) -> str:

@@ -636,7 +636,7 @@ function App() {
 
                 // 1. Verify Model File
                 console.log("Fetching model file...");
-                const response = await fetch('/hand_landmarker.task');
+                const response = await fetch('./hand_landmarker.task');
                 if (!response.ok) {
                     throw new Error(`Failed to fetch model: ${response.status} ${response.statusText}`);
                 }
@@ -653,7 +653,7 @@ function App() {
                 console.log("Creating HandLandmarker (GPU)...");
                 handLandmarkerRef.current = await HandLandmarker.createFromOptions(vision, {
                     baseOptions: {
-                        modelAssetPath: `/hand_landmarker.task`,
+                        modelAssetPath: `./hand_landmarker.task`,
                         delegate: "GPU" // Enable GPU acceleration
                     },
                     runningMode: "VIDEO",
@@ -1693,6 +1693,14 @@ function App() {
                         isCameraFlipped={isCameraFlipped}
                         setIsCameraFlipped={setIsCameraFlipped}
                         handleFileUpload={handleFileUpload}
+                        onLogout={() => {
+                            cloudLogout();
+                            resetAnalytics();
+                            setCloudLoggedIn(false);
+                            setUserPlan('free');
+                            setCloudFeatures(null);
+                            setShowSettings(false);
+                        }}
                         onClose={() => setShowSettings(false)}
                     />
                 )}
