@@ -37,6 +37,12 @@
         "to": ".env"
       }
     ],
+    "protocols": [
+      {
+        "name": "Dvirious Auth",
+        "schemes": ["dvirious"]
+      }
+    ],
     "win": {
       "target": [
         {

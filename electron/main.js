@@ -8,6 +8,69 @@ app.commandLine.appendSwitch('ignore-gpu-blocklist');
 
 const isDev = !app.isPackaged;
 
+// ── Deep Link Protocol (dvirious://auth/callback) ──────────────
+const PROTOCOL = 'dvirious';
+
+if (isDev) {
+    // In dev, register the protocol for the current executable
+    app.setAsDefaultProtocolClient(PROTOCOL, process.execPath, [
+        path.resolve(process.argv[1]),
+    ]);
+} else {
+    app.setAsDefaultProtocolClient(PROTOCOL);
+}
+
+// Windows: handle protocol URL from second instance
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+    app.quit();
+} else {
+    app.on('second-instance', (event, commandLine) => {
+        // The deep link URL is typically the last argument
+        const url = commandLine.find((arg) => arg.startsWith(`${PROTOCOL}://`));
+        if (url) {
+            handleAuthDeepLink(url);
+        }
+        // Focus the existing window
+        if (mainWindow) {
+            if (mainWindow.isMinimized()) mainWindow.restore();
+            mainWindow.focus();
+        }
+    });
+}
+
+function handleAuthDeepLink(url) {
+    console.log('[Auth] Deep link received:', url);
+    // Parse the URL: dvirious://auth/callback#access_token=...&refresh_token=...
+    try {
+        // Supabase puts tokens in the URL fragment (hash)
+        const hashIndex = url.indexOf('#');
+        const queryIndex = url.indexOf('?');
+        const paramString =
+            hashIndex !== -1
+                ? url.substring(hashIndex + 1)
+                : queryIndex !== -1
+                ? url.substring(queryIndex + 1)
+                : '';
+
+        const params = new URLSearchParams(paramString);
+        const authData = {
+            access_token: params.get('access_token'),
+            refresh_token: params.get('refresh_token'),
+            expires_at: params.get('expires_at'),
+            token_type: params.get('token_type'),
+        };
+
+        if (authData.access_token && mainWindow) {
+            // Send tokens to the renderer process
+            mainWindow.webContents.send('auth-callback', authData);
+            console.log('[Auth] Tokens forwarded to renderer');
+        }
+    } catch (err) {
+        console.error('[Auth] Failed to parse deep link:', err.message);
+    }
+}
+
 let mainWindow;
 let pythonProcess;
 
@@ -120,6 +183,12 @@ app.whenReady().then(() => {
 
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    });
+
+    // macOS: handle deep link when app is already running
+    app.on('open-url', (event, url) => {
+        event.preventDefault();
+        handleAuthDeepLink(url);
     });
 });
 

@@ -16,6 +16,17 @@ import KasaWindow from './components/KasaWindow';
 import PrinterWindow from './components/PrinterWindow';
 import SettingsWindow from './components/SettingsWindow';
 import SetupWizard from './components/SetupWizard';
+import LoginScreen from './components/LoginScreen';
+import {
+    isLoggedIn,
+    saveTokens,
+    getValidToken,
+    fetchProfile,
+    createAiSession,
+    reportUsage,
+    logout as cloudLogout,
+    getUserPlan,
+} from './utils/auth';
 
 
 
@@ -38,6 +49,11 @@ function App() {
         // If 'false' or null (default off), we start unlocked.
         return saved === 'true';
     });
+    // Cloud Auth State
+    const [cloudLoggedIn, setCloudLoggedIn] = useState(() => isLoggedIn());
+    const [userPlan, setUserPlan] = useState(() => getUserPlan());
+    const [cloudFeatures, setCloudFeatures] = useState(null);
+
     const [setupComplete, setSetupComplete] = useState(() => {
         return localStorage.getItem('setup_complete') === 'true';
     });
@@ -681,6 +697,79 @@ function App() {
             socket.emit('get_settings');
         }
     }, []);
+
+    // ── Cloud Auth: Listen for OAuth deep link callback from Electron ──
+    useEffect(() => {
+        const { ipcRenderer } = window.require('electron');
+        const handleAuthCallback = (_event, authData) => {
+            console.log('[Auth] OAuth callback received');
+            saveTokens({
+                access_token: authData.access_token,
+                refresh_token: authData.refresh_token,
+                expires_at: authData.expires_at,
+            });
+            setCloudLoggedIn(true);
+            // Fetch profile to get user info
+            fetchProfile().then((profile) => {
+                setUserName(profile.display_name || '');
+                setAiName(profile.ai_name || 'Dvirious');
+                setUserPlan(profile.plan || 'free');
+                localStorage.setItem('user_name', profile.display_name || '');
+                localStorage.setItem('ai_name', profile.ai_name || 'Dvirious');
+            }).catch((err) => console.error('[Auth] Profile fetch failed:', err));
+        };
+        ipcRenderer.on('auth-callback', handleAuthCallback);
+        return () => ipcRenderer.removeListener('auth-callback', handleAuthCallback);
+    }, []);
+
+    // ── Cloud Auth: After login, create AI session & pass key to backend ──
+    useEffect(() => {
+        if (!cloudLoggedIn) return;
+
+        const initCloudSession = async () => {
+            try {
+                const session = await createAiSession();
+                setUserPlan(session.plan);
+                setCloudFeatures(session.features);
+                localStorage.setItem('dvirious_plan', session.plan);
+
+                // Pass the cloud-issued API key to the local Python backend
+                if (session.api_key && socket.connected) {
+                    socket.emit('set_cloud_session', {
+                        api_key: session.api_key,
+                        model: session.model,
+                        plan: session.plan,
+                        features: session.features,
+                    });
+                }
+
+                // Mark setup as complete since user is authenticated
+                setSetupComplete(true);
+                localStorage.setItem('setup_complete', 'true');
+            } catch (err) {
+                console.error('[Cloud] Session creation failed:', err.message);
+                // If session expired, force re-login
+                if (err.message === 'Session expired' || err.message === 'Not authenticated') {
+                    setCloudLoggedIn(false);
+                }
+            }
+        };
+
+        initCloudSession();
+    }, [cloudLoggedIn, socketConnected]);
+
+    // ── Cloud Auth: Periodic usage reporting (every 5 min) ──
+    useEffect(() => {
+        if (!cloudLoggedIn) return;
+        const interval = setInterval(() => {
+            // Report accumulated usage to the cloud
+            const minutesSinceLastReport = 5;
+            reportUsage(minutesSinceLastReport).catch((err) =>
+                console.warn('[Cloud] Usage report failed:', err.message)
+            );
+        }, 5 * 60 * 1000);
+        return () => clearInterval(interval);
+    }, [cloudLoggedIn]);
 
     // Persist device selections to localStorage when they change
     useEffect(() => {
@@ -1386,7 +1475,27 @@ function App() {
 
             {/* --- PREMIUM UI LAYER --- */}
 
-            {!setupComplete && (
+            {/* Cloud Login Screen — shown if not logged in */}
+            {!cloudLoggedIn && (
+                <LoginScreen
+                    onLoginSuccess={(result) => {
+                        setCloudLoggedIn(true);
+                        if (result.user_id) localStorage.setItem('dvirious_user_id', result.user_id);
+                        if (result.email) localStorage.setItem('dvirious_email', result.email);
+                        // Fetch profile after login
+                        fetchProfile().then((profile) => {
+                            setUserName(profile.display_name || '');
+                            setAiName(profile.ai_name || 'Dvirious');
+                            setUserPlan(profile.plan || 'free');
+                            localStorage.setItem('user_name', profile.display_name || '');
+                            localStorage.setItem('ai_name', profile.ai_name || 'Dvirious');
+                        }).catch(() => {});
+                    }}
+                />
+            )}
+
+            {/* Local Setup Wizard — shown after cloud login if first time (no API key yet) */}
+            {cloudLoggedIn && !setupComplete && (
                 <SetupWizard
                     socket={socket}
                     onComplete={(settings) => {

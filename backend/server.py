@@ -1014,6 +1014,43 @@ async def complete_setup(sid, data):
     await sio.emit('settings', SETTINGS)
     await sio.emit('status', {'msg': 'Setup complete!'})
 
+@sio.event
+async def set_cloud_session(sid, data):
+    """Receive cloud-issued API key and session config from the frontend."""
+    api_key = data.get('api_key', '')
+    model = data.get('model', '')
+    plan = data.get('plan', 'free')
+    features = data.get('features', {})
+
+    print(f"[SERVER] Cloud session received: plan={plan}, model={model}, api_key={'***' if api_key else 'EMPTY'}")
+
+    # Save API key to .env so AudioLoop can use it
+    if api_key:
+        env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '.env')
+        try:
+            # Read existing .env and update/add GEMINI_API_KEY
+            env_lines = []
+            if os.path.exists(env_path):
+                with open(env_path, 'r') as f:
+                    env_lines = [l for l in f.readlines() if not l.startswith('GEMINI_API_KEY=')]
+            env_lines.append(f"GEMINI_API_KEY={api_key}\n")
+            with open(env_path, 'w') as f:
+                f.writelines(env_lines)
+            # Also set in current process environment
+            os.environ['GEMINI_API_KEY'] = api_key
+            print(f"[SERVER] Cloud API key saved and set in env")
+        except Exception as e:
+            print(f"[SERVER] Error saving cloud API key: {e}")
+
+    # Store plan and features in settings
+    SETTINGS['cloud_plan'] = plan
+    SETTINGS['cloud_features'] = features
+    if model:
+        SETTINGS['cloud_model'] = model
+    save_settings()
+
+    await sio.emit('status', {'msg': f'Cloud session active — plan: {plan}'})
+
 # Deprecated/Mapped for compatibility if frontend still uses specific events
 @sio.event
 async def get_tool_permissions(sid):
